@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jelajah Bangun Ruang 3D SDN 1 KERTOSARI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0fdf4; color: #1f2937; }
+        canvas { touch-action: none; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { background-color: #10b981; color: white; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4); }
+        .menu-btn { transition: all 0.2s ease; border-left: 4px solid transparent; }
+        .menu-btn.active { border-left-color: #10b981; background-color: #ecfdf5; font-weight: 600; color: #065f46; }
+        input[type=range] { accent-color: #10b981; }
+        
+        /* Math styling */
+        .math-step { background: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; margin-top: 0.5rem; font-family: monospace; font-size: 0.95rem;}
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white shadow-md z-10 flex-none">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-yellow-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    <h1 class="font-bold text-xl md:text-2xl tracking-tight">JELAJAH BANGUN RUANG</h1>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="switchTab('materi')" id="btn-materi" class="tab-btn active px-4 py-2 rounded-md font-semibold text-sm md:text-base">Materi & 3D</button>
+                    <button onclick="switchTab('kuis')" id="btn-kuis" class="tab-btn bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-md font-semibold text-sm md:text-base">Kuis Uji</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content - Materi & 3D -->
+    <main id="tab-materi" class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- Sidebar Menu Bangun -->
+        <aside class="w-full md:w-64 bg-white border-r border-gray-200 overflow-y-auto flex-none flex flex-row md:flex-col shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10">
+            <div class="p-4 hidden md:block border-b border-gray-100 bg-gray-50">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Sisi Datar</h2>
+            </div>
+            <button onclick="selectShape('kubus')" id="menu-kubus" class="menu-btn active w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Kubus</button>
+            <button onclick="selectShape('balok')" id="menu-balok" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Balok</button>
+            <button onclick="selectShape('prisma')" id="menu-prisma" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Prisma Segitiga</button>
+            <button onclick="selectShape('limas')" id="menu-limas" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Limas Segiempat</button>
+            
+            <div class="p-4 hidden md:block border-y border-gray-100 bg-gray-50">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Sisi Lengkung</h2>
+            </div>
+            <button onclick="selectShape('tabung')" id="menu-tabung" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0 border-l md:border-l-0 md:border-t-0">Tabung</button>
+            <button onclick="selectShape('kerucut')" id="menu-kerucut" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Kerucut</button>
+            <button onclick="selectShape('bola')" id="menu-bola" class="menu-btn w-full text-left px-4 py-3 md:py-4 text-gray-700 hover:bg-gray-50 flex-shrink-0">Bola</button>
+        </aside>
+
+        <!-- Canvas and Visuals -->
+        <section class="flex-1 flex flex-col bg-gray-100 relative overflow-y-auto md:overflow-hidden">
+            <div class="flex-1 relative min-h-[300px] flex items-center justify-center p-4">
+                <!-- 3D Canvas -->
+                <canvas id="canvas3d" class="max-w-full max-h-full bg-white rounded-xl shadow-inner border border-gray-200"></canvas>
+                <div class="absolute top-6 left-6 pointer-events-none bg-white/80 px-3 py-1 rounded-full text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
+                    Geser/Sentuh untuk memutar
+                </div>
+            </div>
+            
+            <!-- Controls / Sliders -->
+            <div class="bg-white p-4 md:p-6 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Simulasi Ukuran (cm)
+                </h3>
+                <div id="sliders-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- Sliders injected by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Info & Calculation Panel -->
+        <aside class="w-full md:w-80 lg:w-96 bg-white border-l border-gray-200 overflow-y-auto flex-none flex flex-col">
+            <div class="p-6">
+                <div class="flex items-center gap-2 mb-1">
+                    <span id="shape-type" class="px-2 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded uppercase tracking-wide">Sisi Datar</span>
+                </div>
+                <h2 id="shape-title" class="text-2xl font-extrabold text-gray-900 mb-2">Kubus</h2>
+                <p id="shape-desc" class="text-sm text-gray-600 mb-4">Bangun ruang yang dibatasi oleh 6 sisi berbentuk persegi yang kongruen.</p>
+                
+                <div class="grid grid-cols-3 gap-2 mb-6">
+                    <div class="bg-blue-50 p-2 rounded text-center border border-blue-100">
+                        <div class="text-blue-500 text-xs font-semibold">SISI</div>
+                        <div id="prop-sisi" class="text-xl font-bold text-blue-700">6</div>
+                    </div>
+                    <div class="bg-purple-50 p-2 rounded text-center border border-purple-100">
+                        <div class="text-purple-500 text-xs font-semibold">RUSUK</div>
+                        <div id="prop-rusuk" class="text-xl font-bold text-purple-700">12</div>
+                    </div>
+                    <div class="bg-orange-50 p-2 rounded text-center border border-orange-100">
+                        <div class="text-orange-500 text-xs font-semibold">SUDUT</div>
+                        <div id="prop-sudut" class="text-xl font-bold text-orange-700">8</div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-gray-800 border-b pb-1 mb-2">Kalkulator & Rumus</h3>
+                    <div class="mb-3">
+                        <div class="text-xs font-semibold text-gray-500 mb-1">Volume</div>
+                        <div id="calc-volume" class="math-step"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-gray-500 mb-1">Luas Permukaan</div>
+                        <div id="calc-luas" class="math-step"></div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-gray-800 border-b pb-1 mb-2">Jaring-Jaring</h3>
+                    <div id="jaring-container" class="bg-gray-50 rounded-lg p-4 flex justify-center items-center min-h-[150px] border border-gray-200">
+                        <!-- SVG injected here -->
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-gray-800 border-b pb-1 mb-2">Contoh Benda Nyata</h3>
+                    <p id="shape-examples" class="text-sm text-gray-600 italic">Dadu, rubik, kotak kado.</p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Kuis Content -->
+    <main id="tab-kuis" class="flex-1 bg-gray-50 overflow-y-auto hidden">
+        <div class="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div id="quiz-intro" class="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-200">
+                <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Kuis Jelajah Bangun Ruang</h2>
+                <p class="text-gray-600 mb-6">Uji pemahamanmu tentang sifat, volume, dan luas permukaan bangun ruang kelas 6 SD. Terdapat 15 soal pilihan ganda.</p>
+                <button onclick="startQuiz()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">Mulai Kuis Sekarang</button>
+            </div>
+
+            <div id="quiz-active" class="hidden">
+                <div class="mb-4 flex justify-between items-center text-sm font-medium text-gray-500">
+                    <span id="quiz-progress">Soal 1 dari 15</span>
+                    <span id="quiz-score-live" class="text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">Skor: 0</span>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-200 mb-4">
+                    <h3 id="question-text" class="text-lg md:text-xl font-semibold text-gray-800 mb-6">Pertanyaan...</h3>
+                    <div id="options-container" class="space-y-3">
+                        <!-- Options injected here -->
+                    </div>
+                </div>
+
+                <div id="explanation-box" class="hidden bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-6">
+                    <p class="text-sm text-blue-800 font-semibold mb-1">Pembahasan:</p>
+                    <p id="explanation-text" class="text-sm text-blue-700"></p>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="btn-next-quiz" onclick="nextQuestion()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">Soal Selanjutnya ➔</button>
+                </div>
+            </div>
+
+            <div id="quiz-result" class="hidden bg-white rounded-xl shadow-sm p-8 text-center border border-gray-200">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Kuis Selesai!</h2>
+                <p class="text-gray-600 mb-6">Kerja bagus, berikut adalah hasil akhirmu:</p>
+                <div class="w-32 h-32 mx-auto border-8 border-emerald-500 rounded-full flex items-center justify-center mb-6">
+                    <span id="final-score" class="text-4xl font-extrabold text-emerald-600">100</span>
+                </div>
+                <p id="result-message" class="text-lg font-medium text-gray-700 mb-8">Luar Biasa! Kamu menguasai materi dengan sempurna.</p>
+                <div class="flex justify-center gap-4">
+                    <button onclick="resetQuiz()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-3 px-6 rounded-lg transition-colors">Ulangi Kuis</button>
+                    <button onclick="switchTab('materi')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Kembali ke Materi</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- DATA BANGUN RUANG ---
+        const shapesData = {
+            kubus: {
+                name: "Kubus", type: "Sisi Datar", props: { sisi: 6, rusuk: 12, sudut: 8 },
+                desc: "Bangun ruang yang dibatasi oleh 6 sisi berbentuk persegi yang kongruen (sama besar). Semua rusuknya sama panjang.",
+                examples: "Dadu, rubik, es batu kotak, kotak kado.",
+                sliders: [{ id: 's', label: 'Panjang Sisi (s)', min: 1, max: 20, val: 10 }],
+                calc: (v) => {
+                    let s = v.s;
+                    return {
+                        vol: `V = s × s × s<br>V = ${s} × ${s} × ${s} = <b>${s*s*s} cm³</b>`,
+                        lp: `L = 6 × s²<br>L = 6 × (${s} × ${s})<br>L = 6 × ${s*s} = <b>${6*s*s} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#a7f3d0" stroke="#059669" stroke-width="2">
+                            <rect x="40" y="20" width="20" height="20" />
+                            <rect x="20" y="40" width="20" height="20" />
+                            <rect x="40" y="40" width="20" height="20" />
+                            <rect x="60" y="40" width="20" height="20" />
+                            <rect x="80" y="40" width="20" height="20" />
+                            <rect x="40" y="60" width="20" height="20" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let s = v.s * 4; // Visual scaling multiplier
+                    let h = s/2;
+                    let verts = [
+                        [-h,-h,-h], [h,-h,-h], [h,h,-h], [-h,h,-h], // Belakang
+                        [-h,-h,h], [h,-h,h], [h,h,h], [-h,h,h]      // Depan
+                    ];
+                    let faces = [
+                        [0,1,2,3, '#10b981'], // Belakang
+                        [4,5,6,7, '#34d399'], // Depan
+                        [0,4,7,3, '#059669'], // Kiri
+                        [1,5,6,2, '#059669'], // Kanan
+                        [3,2,6,7, '#6ee7b7'], // Atas
+                        [0,1,5,4, '#047857']  // Bawah
+                    ];
+                    return {verts, faces};
+                }
+            },
+            balok: {
+                name: "Balok", type: "Sisi Datar", props: { sisi: 6, rusuk: 12, sudut: 8 },
+                desc: "Bangun ruang sisi datar yang memiliki 3 pasang sisi berbentuk persegi panjang yang saling berhadapan dan kongruen.",
+                examples: "Kotak sepatu, lemari, batu bata, penghapus.",
+                sliders: [
+                    { id: 'p', label: 'Panjang (p)', min: 1, max: 20, val: 12 },
+                    { id: 'l', label: 'Lebar (l)', min: 1, max: 20, val: 8 },
+                    { id: 't', label: 'Tinggi (t)', min: 1, max: 20, val: 6 }
+                ],
+                calc: (v) => {
+                    let p = v.p, l = v.l, t = v.t;
+                    let vol = p * l * t;
+                    let lp = 2 * ((p*l) + (p*t) + (l*t));
+                    return {
+                        vol: `V = p × l × t<br>V = ${p} × ${l} × ${t} = <b>${vol} cm³</b>`,
+                        lp: `L = 2 × (pl + pt + lt)<br>L = 2 × ((${p}×${l}) + (${p}×${t}) + (${l}×${t}))<br>L = 2 × (${p*l} + ${p*t} + ${l*t}) = <b>${lp} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#bae6fd" stroke="#0284c7" stroke-width="2">
+                            <rect x="35" y="10" width="30" height="20" />
+                            <rect x="15" y="30" width="20" height="40" />
+                            <rect x="35" y="30" width="30" height="40" />
+                            <rect x="65" y="30" width="20" height="40" />
+                            <rect x="35" y="70" width="30" height="20" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let p = v.p * 4, l = v.l * 4, t = v.t * 4; 
+                    let hp = p/2, hl = l/2, ht = t/2;
+                    let verts = [
+                        [-hp,-ht,-hl], [hp,-ht,-hl], [hp,ht,-hl], [-hp,ht,-hl], 
+                        [-hp,-ht,hl], [hp,-ht,hl], [hp,ht,hl], [-hp,ht,hl]      
+                    ];
+                    let faces = [
+                        [0,1,2,3, '#38bdf8'], [4,5,6,7, '#7dd3fc'], 
+                        [0,4,7,3, '#0284c7'], [1,5,6,2, '#0284c7'], 
+                        [3,2,6,7, '#bae6fd'], [0,1,5,4, '#0369a1']  
+                    ];
+                    return {verts, faces};
+                }
+            },
+            prisma: {
+                name: "Prisma Segitiga", type: "Sisi Datar", props: { sisi: 5, rusuk: 9, sudut: 6 },
+                desc: "Bangun ruang yang memiliki alas dan tutup berbentuk segitiga yang kongruen, serta selimut berbentuk persegi panjang.",
+                examples: "Tenda pramuka, atap rumah, cokelat toblerone.",
+                sliders: [
+                    { id: 'a', label: 'Alas Segitiga (a)', min: 2, max: 15, val: 8 },
+                    { id: 't_alas', label: 'Tinggi Segitiga (ta)', min: 2, max: 15, val: 6 },
+                    { id: 't_prisma', label: 'Tinggi Prisma (tp)', min: 2, max: 20, val: 15 }
+                ],
+                calc: (v) => {
+                    let a = v.a, ta = v.t_alas, tp = v.t_prisma;
+                    let lAlas = (a * ta) / 2;
+                    let vol = lAlas * tp;
+                    // Asumsi segitiga sama kaki untuk keliling perkiraan
+                    let sisiMiring = Math.sqrt(Math.pow(a/2, 2) + Math.pow(ta, 2));
+                    let kelilingAlas = a + (2 * sisiMiring);
+                    let lp = (2 * lAlas) + (kelilingAlas * tp);
+                    return {
+                        vol: `L. Alas = ½ × a × ta = ½ × ${a} × ${ta} = ${lAlas}<br>V = L. Alas × tp<br>V = ${lAlas} × ${tp} = <b>${vol} cm³</b>`,
+                        lp: `(Diasumsikan Segitiga Sama Kaki)<br>L = (2 × L.Alas) + (K.Alas × tp)<br>L = (2 × ${lAlas}) + (${kelilingAlas.toFixed(1)} × ${tp})<br>L ≈ <b>${lp.toFixed(1)} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#fde047" stroke="#ca8a04" stroke-width="2">
+                            <polygon points="50,10 30,30 70,30" />
+                            <rect x="10" y="30" width="20" height="40" />
+                            <rect x="30" y="30" width="40" height="40" />
+                            <rect x="70" y="30" width="20" height="40" />
+                            <polygon points="30,70 70,70 50,90" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let a = v.a*4, ta = v.t_alas*4, tp = v.t_prisma*4;
+                    let verts = [
+                        [-a/2, -ta/2, -tp/2], [a/2, -ta/2, -tp/2], [0, ta/2, -tp/2], // Alas belakang (segitiga)
+                        [-a/2, -ta/2, tp/2], [a/2, -ta/2, tp/2], [0, ta/2, tp/2]   // Atas depan (segitiga)
+                    ];
+                    let faces = [
+                        [0,1,2, '#eab308'], [3,4,5, '#fef08a'], // Segitiga
+                        [0,1,4,3, '#ca8a04'], // Bawah persegi panjang
+                        [1,2,5,4, '#facc15'], // Samping kanan
+                        [0,2,5,3, '#facc15']  // Samping kiri
+                    ];
+                    return {verts, faces};
+                }
+            },
+            limas: {
+                name: "Limas Segiempat", type: "Sisi Datar", props: { sisi: 5, rusuk: 8, sudut: 5 },
+                desc: "Bangun ruang yang alasnya berbentuk segiempat (persegi/persegi panjang) dan sisi tegaknya berbentuk segitiga yang bertemu di satu titik puncak.",
+                examples: "Piramida Mesir, atap masjid tradisional.",
+                sliders: [
+                    { id: 's', label: 'Sisi Alas (s)', min: 2, max: 20, val: 10 },
+                    { id: 't', label: 'Tinggi Limas (t)', min: 2, max: 20, val: 12 }
+                ],
+                calc: (v) => {
+                    let s = v.s, t = v.t;
+                    let lAlas = s * s;
+                    let vol = (1/3) * lAlas * t;
+                    let tSisiTegak = Math.sqrt(Math.pow(s/2, 2) + Math.pow(t, 2));
+                    let lSelimut = 4 * (0.5 * s * tSisiTegak);
+                    let lp = lAlas + lSelimut;
+                    return {
+                        vol: `V = ⅓ × L.Alas × t<br>V = ⅓ × (${s}×${s}) × ${t}<br>V = ⅓ × ${lAlas} × ${t} = <b>${vol.toFixed(1)} cm³</b>`,
+                        lp: `t. segitiga = √(${s/2}² + ${t}²) = ${tSisiTegak.toFixed(2)}<br>L = L.Alas + (4 × L.Segitiga)<br>L = ${lAlas} + (4 × (½ × ${s} × ${tSisiTegak.toFixed(2)}))<br>L ≈ <b>${lp.toFixed(1)} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#fbcfe8" stroke="#db2777" stroke-width="2">
+                            <rect x="35" y="35" width="30" height="30" />
+                            <polygon points="35,35 65,35 50,10" />
+                            <polygon points="35,65 65,65 50,90" />
+                            <polygon points="35,35 35,65 10,50" />
+                            <polygon points="65,35 65,65 90,50" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let s = v.s*4, t = v.t*4;
+                    let hs = s/2;
+                    let verts = [
+                        [-hs, -t/2, -hs], [hs, -t/2, -hs], [hs, -t/2, hs], [-hs, -t/2, hs], // Alas
+                        [0, t/2, 0] // Puncak
+                    ];
+                    let faces = [
+                        [0,1,2,3, '#be185d'], // Alas
+                        [0,1,4, '#f472b6'], [1,2,4, '#f9a8d4'], 
+                        [2,3,4, '#f472b6'], [3,0,4, '#db2777']
+                    ];
+                    return {verts, faces};
+                }
+            },
+            tabung: {
+                name: "Tabung", type: "Sisi Lengkung", props: { sisi: 3, rusuk: 2, sudut: 0 },
+                desc: "Bangun ruang yang dibatasi oleh dua sisi sejajar berbentuk lingkaran yang kongruen (alas dan tutup) serta sebuah sisi lengkung (selimut).",
+                examples: "Kaleng minuman, drum, pipa, gelas.",
+                sliders: [
+                    { id: 'r', label: 'Jari-jari (r)', min: 1, max: 15, val: 7 },
+                    { id: 't', label: 'Tinggi (t)', min: 2, max: 20, val: 10 }
+                ],
+                calc: (v) => {
+                    let r = v.r, t = v.t;
+                    let pi = (r % 7 === 0) ? '22/7' : '3.14';
+                    let piVal = (r % 7 === 0) ? 22/7 : 3.14;
+                    let vol = piVal * r * r * t;
+                    let lp = 2 * piVal * r * (r + t);
+                    return {
+                        vol: `V = π × r² × t<br>V = ${pi} × ${r}² × ${t}<br>V ≈ <b>${vol.toFixed(1)} cm³</b>`,
+                        lp: `L = 2 × π × r × (r + t)<br>L = 2 × ${pi} × ${r} × (${r} + ${t})<br>L = 2 × ${pi} × ${r} × ${r+t} ≈ <b>${lp.toFixed(1)} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#c7d2fe" stroke="#4f46e5" stroke-width="2">
+                            <circle cx="50" cy="20" r="15" />
+                            <rect x="25" y="40" width="50" height="30" />
+                            <circle cx="50" cy="85" r="15" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let r = v.r*3, t = v.t*4;
+                    let verts = [];
+                    let segments = 20;
+                    for(let i=0; i<segments; i++) {
+                        let angle = (i / segments) * Math.PI * 2;
+                        let x = Math.cos(angle) * r;
+                        let z = Math.sin(angle) * r;
+                        verts.push([x, -t/2, z]); // Bawah
+                        verts.push([x, t/2, z]);  // Atas
+                    }
+                    let faces = [];
+                    let bottomFace = [], topFace = [];
+                    for(let i=0; i<segments; i++) {
+                        let nextI = (i+1)%segments;
+                        let vB1 = i*2, vT1 = i*2+1;
+                        let vB2 = nextI*2, vT2 = nextI*2+1;
+                        // Selimut
+                        faces.push([vB1, vB2, vT2, vT1, '#818cf8']);
+                        bottomFace.push(vB1);
+                        topFace.push(vT1);
+                    }
+                    faces.push([...bottomFace.reverse(), '#4338ca']);
+                    faces.push([...topFace, '#a5b4fc']);
+                    return {verts, faces};
+                }
+            },
+            kerucut: {
+                name: "Kerucut", type: "Sisi Lengkung", props: { sisi: 2, rusuk: 1, sudut: 1 }, // 1 sudut pucak
+                desc: "Bangun ruang sisi lengkung yang menyerupai limas, memiliki alas berbentuk lingkaran dan selimut yang mengerucut ke satu titik puncak.",
+                examples: "Topi ulang tahun, cone es krim, tumpeng, kun purwarupa.",
+                sliders: [
+                    { id: 'r', label: 'Jari-jari (r)', min: 1, max: 15, val: 7 },
+                    { id: 't', label: 'Tinggi (t)', min: 2, max: 20, val: 12 }
+                ],
+                calc: (v) => {
+                    let r = v.r, t = v.t;
+                    let pi = (r % 7 === 0) ? '22/7' : '3.14';
+                    let piVal = (r % 7 === 0) ? 22/7 : 3.14;
+                    let s = Math.sqrt(r*r + t*t);
+                    let vol = (1/3) * piVal * r * r * t;
+                    let lp = piVal * r * (r + s);
+                    return {
+                        vol: `V = ⅓ × π × r² × t<br>V = ⅓ × ${pi} × ${r}² × ${t}<br>V ≈ <b>${vol.toFixed(1)} cm³</b>`,
+                        lp: `s (garis pelukis) = √(${r}² + ${t}²) = ${s.toFixed(2)}<br>L = π × r × (r + s)<br>L = ${pi} × ${r} × (${r} + ${s.toFixed(2)}) ≈ <b>${lp.toFixed(1)} cm²</b>`
+                    };
+                },
+                jaring: `<svg width="150" height="150" viewBox="0 0 100 100" fill="#fed7aa" stroke="#ea580c" stroke-width="2">
+                            <path d="M 50 15 L 20 65 A 35 25 0 0 0 80 65 Z" />
+                            <circle cx="50" cy="85" r="12" />
+                         </svg>`,
+                buildVertices: (v) => {
+                    let r = v.r*3, t = v.t*4;
+                    let verts = [];
+                    let segments = 20;
+                    verts.push([0, t/2, 0]); // Puncak (index 0)
+                    let bottomFace = [];
+                    for(let i=0; i<segments; i++) {
+                        let angle = (i / segments) * Math.PI * 2;
+                        verts.push([Math.cos(angle) * r, -t/2, Math.sin(angle) * r]);
+                        bottomFace.push(i+1);
+                    }
+                    let faces = [];
+                    for(let i=0; i<segments; i++) {
+                        let nextI = (i+1)%segments;
+                        faces.push([0, i+1, nextI+1, '#fdba74']);
+                    }
+                    faces.push([...bottomFace.reverse(), '#c2410c']);
+                    return {verts, faces};
+                }
+            },
+            bola: {
+                name: "Bola", type: "Sisi Lengkung", props: { sisi: 1, rusuk: 0, sudut: 0 },
+                desc: "Bangun ruang sisi lengkung yang dibentuk dari lingkaran tak hingga yang diputar berpusat pada satu titik. Hanya memiliki satu sisi lengkung tertutup.",
+                examples: "Bola sepak, kelereng, globe, semangka bundar.",
+                sliders: [
+                    { id: 'r', label: 'Jari-jari (r)', min: 2, max: 15, val: 7 }
+                ],
+                calc: (v) => {
+                    let r = v.r;
+                    let pi = (r % 7 === 0) ? '22/7' : '3.14';
+                    let piVal = (r % 7 === 0) ? 22/7 : 3.14;
+                    let vol = (4/3) * piVal * r * r * r;
+                    let lp = 4 * piVal * r * r;
+                    return {
+                        vol: `V = 4/3 × π × r³<br>V = 4/3 × ${pi} × ${r}³<br>V ≈ <b>${vol.toFixed(1)} cm³</b>`,
+                        lp: `L = 4 × π × r²<br>L = 4 × ${pi} × ${r}²<br>L ≈ <b>${lp.toFixed(1)} cm²</b>`
+                    };
+                },
+                jaring: `<div class="text-center p-2 text-sm text-gray-500 italic">Bola tidak memiliki jaring-jaring dua dimensi sederhana.</div>`,
+                buildVertices: (v) => {
+                    let r = v.r*4.5;
+                    let verts = [];
+                    let faces = [];
+                    let lats = 12;
+                    let longs = 16;
+                    
+                    for (let i = 0; i <= lats; i++) {
+                        let theta = i * Math.PI / lats;
+                        let sinTheta = Math.sin(theta);
+                        let cosTheta = Math.cos(theta);
+
+                        for (let j = 0; j <= longs; j++) {
+                            let phi = j * 2 * Math.PI / longs;
+                            let sinPhi = Math.sin(phi);
+                            let cosPhi = Math.cos(phi);
+
+                            let x = r * cosPhi * sinTheta;
+                            let y = r * cosTheta;
+                            let z = r * sinPhi * sinTheta;
+                            verts.push([x, y, z]);
+                        }
+                    }
+
+                    for (let i = 0; i < lats; i++) {
+                        for (let j = 0; j < longs; j++) {
+                            let first = (i * (longs + 1)) + j;
+                            let second = first + longs + 1;
+                            
+                            // Pewarnaan unik seperti pola globe agar terlihat bulat putar
+                            let color = ((i+j)%2 === 0) ? '#fca5a5' : '#ef4444';
+                            faces.push([first, second, second + 1, first + 1, color]);
+                        }
+                    }
+                    return {verts, faces};
+                }
+            }
+        };
+
+        // --- STATE & CORE LOGIC ---
+        let currentShape = 'kubus';
+        let sliderValues = {};
+        
+        // 3D Canvas State
+        let canvas, ctx;
+        let angleX = 0.5, angleY = -0.5;
+        let isDragging = false;
+        let lastX, lastY;
+        let animFrame;
+
+        window.onload = () => {
+            canvas = document.getElementById('canvas3d');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            setup3DInteractions();
+            
+            selectShape('kubus'); // Init default shape
+        };
+
+        function switchTab(tab) {
+            document.getElementById('tab-materi').classList.toggle('hidden', tab !== 'materi');
+            document.getElementById('tab-kuis').classList.toggle('hidden', tab !== 'kuis');
+            
+            document.getElementById('btn-materi').classList.toggle('active', tab === 'materi');
+            document.getElementById('btn-materi').classList.toggle('bg-emerald-500', tab !== 'materi');
+            document.getElementById('btn-materi').classList.toggle('text-white', tab !== 'materi');
+            
+            document.getElementById('btn-kuis').classList.toggle('active', tab === 'kuis');
+            document.getElementById('btn-kuis').classList.toggle('bg-emerald-500', tab !== 'kuis');
+            document.getElementById('btn-kuis').classList.toggle('text-white', tab !== 'kuis');
+
+            if (tab === 'materi') {
+                resizeCanvas();
+            }
+        }
+
+        function selectShape(shapeKey) {
+            currentShape = shapeKey;
+            let data = shapesData[shapeKey];
+            
+            // Update Menu Active State
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('menu-' + shapeKey).classList.add('active');
+            
+            // Update Info Panel
+            document.getElementById('shape-type').textContent = data.type;
+            document.getElementById('shape-type').className = `px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${data.type === 'Sisi Datar' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'}`;
+            document.getElementById('shape-title').textContent = data.name;
+            document.getElementById('shape-desc').textContent = data.desc;
+            document.getElementById('prop-sisi').textContent = data.props.sisi;
+            document.getElementById('prop-rusuk').textContent = data.props.rusuk;
+            document.getElementById('prop-sudut').textContent = data.props.sudut;
+            document.getElementById('shape-examples').textContent = data.examples;
+            document.getElementById('jaring-container').innerHTML = data.jaring;
+
+            // Generate Sliders
+            let sliderHtml = '';
+            sliderValues = {};
+            data.sliders.forEach(sl => {
+                sliderValues[sl.id] = sl.val;
+                sliderHtml += `
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">${sl.label}: <span id="val-${sl.id}" class="text-emerald-600 font-bold">${sl.val}</span></label>
+                        <input type="range" min="${sl.min}" max="${sl.max}" value="${sl.val}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="updateDimension('${sl.id}', this.value)">
+                    </div>
+                `;
+            });
+            document.getElementById('sliders-container').innerHTML = sliderHtml;
+
+            updateMath();
+        }
+
+        function updateDimension(id, value) {
+            sliderValues[id] = parseFloat(value);
+            document.getElementById(`val-${id}`).textContent = value;
+            updateMath();
+        }
+
+        function updateMath() {
+            let data = shapesData[currentShape];
+            let results = data.calc(sliderValues);
+            document.getElementById('calc-volume').innerHTML = results.vol;
+            document.getElementById('calc-luas').innerHTML = results.lp;
+            
+            // Trigger redraw
+            cancelAnimationFrame(animFrame);
+            draw3D();
+        }
+
+        // --- 3D ENGINE (Canvas 2D Proyeksi) ---
+        function resizeCanvas() {
+            if(!canvas) return;
+            let rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            draw3D();
+        }
+
+        function setup3DInteractions() {
+            const startDrag = (e) => {
+                isDragging = true;
+                lastX = e.clientX || e.touches[0].clientX;
+                lastY = e.clientY || e.touches[0].clientY;
+            };
+            const onDrag = (e) => {
+                if (!isDragging) return;
+                let clientX = e.clientX || e.touches[0].clientX;
+                let clientY = e.clientY || e.touches[0].clientY;
+                let dx = clientX - lastX;
+                let dy = clientY - lastY;
+                angleY += dx * 0.01;
+                angleX += dy * 0.01;
+                lastX = clientX;
+                lastY = clientY;
+                draw3D();
+            };
+            const endDrag = () => isDragging = false;
+
+            canvas.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('mouseup', endDrag);
+            
+            canvas.addEventListener('touchstart', startDrag, {passive: false});
+            window.addEventListener('touchmove', onDrag, {passive: false});
+            window.addEventListener('touchend', endDrag);
+        }
+
+        function rotatePoint(x, y, z, ax, ay) {
+            // Rotate X
+            let cosX = Math.cos(ax), sinX = Math.sin(ax);
+            let y1 = y * cosX - z * sinX;
+            let z1 = y * sinX + z * cosX;
+            
+            // Rotate Y
+            let cosY = Math.cos(ay), sinY = Math.sin(ay);
+            let x2 = x * cosY + z1 * sinY;
+            let z2 = -x * sinY + z1 * cosY;
+            
+            return [x2, y1, z2];
+        }
+
+        function draw3D() {
+            if(!ctx || !canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let cx = canvas.width / 2;
+            let cy = canvas.height / 2;
+            
+            let data = shapesData[currentShape];
+            let geom = data.buildVertices(sliderValues);
+            let verts = geom.verts;
+            let faces = geom.faces;
+
+            // Transform vertices
+            let projected = [];
+            let rotated = [];
+            
+            for(let i=0; i<verts.length; i++) {
+                let [x, y, z] = rotatePoint(verts[i][0], verts[i][1], verts[i][2], angleX, angleY);
+                rotated.push([x, y, z]);
+                
+                // Simple orthogonal projection for clarity (scaled up slightly)
+                let scale = Math.min(canvas.width, canvas.height) / 200; // Base responsive scale
+                let px = cx + x * scale * 1.5;
+                let py = cy + y * scale * 1.5;
+                projected.push([px, py, z]);
+            }
+
+            // Painter's Algorithm: Sort faces by Z depth
+            let faceDepths = faces.map((face, index) => {
+                let zSum = 0;
+                let len = face.length - 1; // Last element is color
+                for(let i=0; i<len; i++) zSum += rotated[face[i]][2];
+                return { index: index, depth: zSum / len };
+            });
+            
+            faceDepths.sort((a, b) => b.depth - a.depth); // Draw furthest first (smaller Z for further back usually, depends on axis. We use deeper Z = behind)
+
+            // Draw faces
+            ctx.lineWidth = 1;
+            ctx.lineJoin = "round";
+            
+            faceDepths.forEach(fd => {
+                let face = faces[fd.index];
+                let color = face[face.length - 1];
+                
+                ctx.beginPath();
+                for(let i=0; i<face.length - 1; i++) {
+                    let p = projected[face[i]];
+                    if(i === 0) ctx.moveTo(p[0], p[1]);
+                    else ctx.lineTo(p[0], p[1]);
+                }
+                ctx.closePath();
+                
+                // Fill & Stroke
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.stroke();
+            });
+            
+            animFrame = requestAnimationFrame(() => {}); // Idle, no auto-spin to save battery, only spin on drag
+        }
+
+
+        // --- KUIS DATA & LOGIC ---
+        const quizQuestions = [
+            { q: "Manakah bangun ruang yang memiliki 6 sisi berbentuk persegi yang sama besar?", opts: ["Balok", "Kubus", "Prisma", "Tabung"], ans: 1, exp: "Kubus adalah bangun ruang yang dibatasi oleh 6 sisi berwujud persegi yang semuanya berukuran sama (kongruen)." },
+            { q: "Volume dari sebuah balok yang memiliki panjang 5 cm, lebar 4 cm, dan tinggi 3 cm adalah...", opts: ["60 cm³", "47 cm³", "12 cm³", "30 cm³"], ans: 0, exp: "V = p × l × t = 5 × 4 × 3 = 60 cm³." },
+            { q: "Bangun ruang sisi lengkung yang memiliki 2 sisi datar (alas dan tutup) serta 1 selimut lengkung adalah...", opts: ["Bola", "Kerucut", "Tabung", "Limas"], ans: 2, exp: "Tabung memiliki tutup dan alas berbentuk lingkaran (datar) serta satu sisi selimut yang melengkung." },
+            { q: "Rumus luas permukaan kubus adalah...", opts: ["s × s × s", "4 × s", "6 × s²", "12 × s"], ans: 2, exp: "Kubus memiliki 6 sisi yang semuanya berbentuk persegi dengan luas sisi s². Jadi luas permukaannya 6 × s²." },
+            { q: "Berapa banyak rusuk yang dimiliki sebuah Limas Segiempat?", opts: ["5", "6", "8", "12"], ans: 2, exp: "Limas segiempat memiliki 4 rusuk di alas dan 4 rusuk tegak, sehingga totalnya 8 rusuk." },
+            { q: "Bangun ruang apakah yang sama sekali tidak memiliki titik sudut?", opts: ["Tabung dan Kerucut", "Bola dan Tabung", "Bola dan Kubus", "Hanya Bola"], ans: 1, exp: "Bola tidak memiliki titik sudut. Tabung juga tidak memiliki titik sudut." },
+            { q: "Jika sebuah tabung memiliki jari-jari alas 7 cm dan tinggi 10 cm, berapakah volumenya? (Gunakan π = 22/7)", opts: ["1540 cm³", "440 cm³", "770 cm³", "220 cm³"], ans: 0, exp: "V = π × r² × t = (22/7) × 7² × 10 = 22/7 × 49 × 10 = 1540 cm³." },
+            { q: "Jaring-jaring bangun apakah yang terdiri dari sebuah lingkaran dan sebuah juring (potongan lingkaran)?", opts: ["Tabung", "Bola", "Kerucut", "Prisma"], ans: 2, exp: "Kerucut terbentuk dari alas berupa lingkaran utuh dan selimut yang jika dibentangkan berupa juring lingkaran." },
+            { q: "Jumlah titik sudut pada Prisma Segitiga adalah...", opts: ["5", "6", "8", "9"], ans: 1, exp: "Prisma segitiga memiliki 3 titik sudut di alas dan 3 titik sudut di tutup, total 6 titik sudut." },
+            { q: "Manakah dari bangun berikut yang termasuk bangun ruang sisi datar?", opts: ["Limas, Prisma, Balok", "Kubus, Tabung, Kerucut", "Bola, Balok, Prisma", "Tabung, Limas, Bola"], ans: 0, exp: "Limas, Prisma, dan Balok semua sisinya berupa bidang datar, tidak ada yang melengkung." },
+            { q: "Sebuah kerucut memiliki volume sepertiga dari bangun...", opts: ["Kubus dengan alas sama", "Tabung dengan alas dan tinggi yang sama", "Bola dengan jari-jari sama", "Prisma segiempat"], ans: 1, exp: "Rumus volume kerucut adalah ⅓ × Luas Alas × tinggi, yang mana merupakan ⅓ dari volume Tabung (Luas Alas × tinggi)." },
+            { q: "Benda manakah di bawah ini yang bentuknya menyerupai Bola?", opts: ["Kaleng Susu", "Piramida", "Kelereng", "Buku"], ans: 2, exp: "Kelereng memiliki bentuk bulat penuh 3D yang merupakan bentuk nyata dari Bola." },
+            { q: "Sebuah kubus mempunyai panjang sisi 10 cm. Luas permukaan kubus tersebut adalah...", opts: ["100 cm²", "600 cm²", "1000 cm²", "400 cm²"], ans: 1, exp: "L = 6 × s² = 6 × (10 × 10) = 6 × 100 = 600 cm²." },
+            { q: "Prisma segiempat merupakan nama lain dari bangun...", opts: ["Limas", "Balok atau Kubus", "Tabung", "Trapesium"], ans: 1, exp: "Prisma adalah bangun dengan alas dan tutup sejajar kongruen. Jika alasnya segiempat siku-siku, maka disebut balok/kubus." },
+            { q: "Rumus volume bola yang benar adalah...", opts: ["4/3 × π × r³", "¾ × π × r²", "2 × π × r", "π × r² × t"], ans: 0, exp: "Volume bola diperoleh dengan rumus 4/3 kalikan dengan π (pi) kalikan jari-jari pangkat 3 (r³)." }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let hasAnswered = false;
+
+        function startQuiz() {
+            document.getElementById('quiz-intro').classList.add('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-active').classList.remove('hidden');
+            currentQuestion = 0;
+            score = 0;
+            showQuestion();
+            updateQuizUI();
+        }
+
+        function showQuestion() {
+            hasAnswered = false;
+            let q = quizQuestions[currentQuestion];
+            document.getElementById('question-text').textContent = q.q;
+            document.getElementById('explanation-box').classList.add('hidden');
+            document.getElementById('btn-next-quiz').classList.add('hidden');
+            
+            let optsHtml = '';
+            q.opts.forEach((opt, index) => {
+                optsHtml += `<button onclick="checkAnswer(${index}, this)" class="quiz-opt w-full text-left px-5 py-4 border-2 border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all font-medium text-gray-700">${opt}</button>`;
+            });
+            document.getElementById('options-container').innerHTML = optsHtml;
+            document.getElementById('quiz-progress').textContent = `Soal ${currentQuestion + 1} dari ${quizQuestions.length}`;
+        }
+
+        function checkAnswer(index, btnElement) {
+            if (hasAnswered) return;
+            hasAnswered = true;
+            
+            let q = quizQuestions[currentQuestion];
+            let allBtns = document.querySelectorAll('.quiz-opt');
+            
+            // Disable all buttons
+            allBtns.forEach(btn => btn.classList.remove('hover:border-emerald-500', 'hover:bg-emerald-50'));
+
+            if (index === q.ans) {
+                // Correct
+                btnElement.classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-800');
+                score += 100 / quizQuestions.length;
+            } else {
+                // Wrong
+                btnElement.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                // Highlight correct
+                allBtns[q.ans].classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-800');
+            }
+
+            document.getElementById('explanation-text').textContent = q.exp;
+            document.getElementById('explanation-box').classList.remove('hidden');
+            document.getElementById('btn-next-quiz').classList.remove('hidden');
+            
+            if (currentQuestion === quizQuestions.length - 1) {
+                document.getElementById('btn-next-quiz').textContent = "Lihat Hasil Akhir";
+            }
+            updateQuizUI();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < quizQuestions.length - 1) {
+                currentQuestion++;
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-active').classList.add('hidden');
+            document.getElementById('quiz-result').classList.remove('hidden');
+            let finalS = Math.round(score);
+            document.getElementById('final-score').textContent = finalS;
+            
+            let msg = "";
+            if(finalS >= 90) msg = "Luar Biasa! Kamu sangat menguasai bangun ruang.";
+            else if(finalS >= 70) msg = "Bagus! Pemahamanmu sudah baik, tetap semangat!";
+            else msg = "Jangan menyerah! Coba pelajari materi lagi dan ulangi kuisnya.";
+            document.getElementById('result-message').textContent = msg;
+        }
+
+        function resetQuiz() {
+            startQuiz();
+        }
+
+        function updateQuizUI() {
+            document.getElementById('quiz-score-live').textContent = `Skor: ${Math.round(score)}`;
+        }
+    </script>
+</body>
+</html>
